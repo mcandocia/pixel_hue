@@ -63,7 +63,7 @@ def main(options):
         if v is not None
     }
 
-    output_fn = 'hues.csv'
+    output_fn = options['outfile']
 
     with open(output_fn, 'w') as f:
         f.write('fn,hue,cnt\n')
