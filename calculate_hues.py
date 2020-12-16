@@ -2,9 +2,11 @@ from PIL import Image, ImageSequence
 from collections import Counter
 import os
 import numpy as np
+import argparse
+
 from multiprocessing import Pool
 
-IMG_DIR = 'images'
+#IMG_DIR = 'images'
 
 
 def tabulate_hues(fn):
@@ -16,14 +18,16 @@ def tabulate_hues(fn):
 
         if '.gif' in fn:
             for frame in ImageSequence.Iterator(hsv_im):
-                hues = np.asarray(frame)[:,:,0].flatten()
-                sats = np.asarray(frame)[:,:,1].flatten()
+                npframe = np.asarray(frame)
+                hues = npframe[:,:,0].flatten()
+                sats = npframe[:,:,1].flatten()
                 hue_counter.update([
                     h for h,s in zip(hues, sats) if s > 0
                 ])
         else:
-            hues = np.asarray(hsv_im)[:,:,0].flatten()
-            sats = np.asarray(hsv_im)[:,:,1].flatten()
+            npframe = np.asarray(hsv_im)
+            hues = npframe[:,:,0].flatten()
+            sats = npframe[:,:,1].flatten()
             hue_counter.update([
                 h for h,s in zip(hues, sats) if s > 0
             ])
@@ -32,12 +36,22 @@ def tabulate_hues(fn):
 
     return hue_counter
 
-def main():
+def main(options):
     fn_list = [
-        os.path.join(IMG_DIR, fn)
-        for fn in  os.listdir(IMG_DIR)
+        os.path.join(options['image_directory'], fn)
+        for fn in  os.listdir(options['image_directory'])
     ]
+
+    if options['subdirectories']:
+        print(fn_list)
+        fn_list = [
+            os.path.join(subdir, fn)
+            for subdir in fn_list
+            for fn in os.listdir(subdir)
+        ]
     hue_dict = dict()
+
+    print(len(fn_list))
 
     with Pool(9) as p:
         hue_maps = p.map(tabulate_hues, fn_list)
@@ -63,6 +77,33 @@ def main():
 
     print('Done!')
 
+def get_options():
+    parser = argparse.ArgumentParser(
+        description='Tabulate hues from images'
+    )
+
+    parser.add_argument(
+        'image_directory',
+        help='Directory to tabulate images from',
+    )
+
+    parser.add_argument(
+        '--outfile',
+        default='hues.csv',
+        help='Output file'
+    )
+
+    parser.add_argument(
+        '--subdirectories',
+        action='store_true',
+        help='Look at files in subdirectories'
+    )
+
+    args = parser.parse_args()
+    options = vars(args)
+    return options
+        
                                
 if __name__=='__main__':
-    main()
+    options = get_options()
+    main(options)
